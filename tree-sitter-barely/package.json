@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "nan": "^2.19.0"
+  },
+  "main": "bindings/node"
+}
