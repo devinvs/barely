@@ -30,7 +30,6 @@ lazy_static! {
         let mut m = HashMap::new();
 
         m.insert("macro", Token::Macro);
-        m.insert("let", Token::Let);
         m.insert("import", Token::Import);
 
         // separators
@@ -143,7 +142,6 @@ impl LexemeFeed for TokenStream {
 pub enum Token {
     // Keywords,
     Macro,
-    Let,
     Import,
 
     // Operators

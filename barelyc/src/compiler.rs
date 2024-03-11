@@ -311,7 +311,7 @@ fn compile_muldiv(
     // arg0 goes in rax, which is guaranteed clear (it gets clobbered)
     // but arg0 goes in another register (not rax)
     let arg1r = m.get_any_register_except(&[RAX], text);
-    text.push(format!("{op} {}", NAME[arg1r]));
+    text.push(format!("{op} {}\n", NAME[arg1r]));
     m.free_register(out_reg);
 
     // Now we need to make sure that they are in those registers
@@ -644,7 +644,7 @@ fn compile_binary(
 
     // Now the inputs are properly set
     // It is now time to do the actual op
-    text.push(format!("{name} {}, {}", NAME[r_out], arg1n));
+    text.push(format!("{name} {}, {}\n", NAME[r_out], arg1n));
     text.push(format!("mov {}, {}", NAME[r_out], arg0n));
 
     // output register is free to be used by anyone

@@ -5,6 +5,7 @@ use crate::macros::apply_macros;
 use crate::parser;
 use crate::parser::Expr;
 use crate::parser::Stmt;
+use crate::parser::LHS;
 
 #[derive(Clone)]
 pub enum SSAVal {
@@ -106,11 +107,13 @@ fn stmt_to_ssa(
     me: &mut Program,
 ) -> SSAVal {
     match stmt {
-        Stmt::Assign(name, e) => {
-            let v = expr_to_ssa(e, i, vars, me);
-            vars.insert(name, v.clone());
-            v
-        }
+        Stmt::Assign(lhs, e) => match lhs {
+            LHS::Name(name) => {
+                let v = expr_to_ssa(e, i, vars, me);
+                vars.insert(name, v.clone());
+                v
+            }
+        },
         Stmt::Expr(e) => expr_to_ssa(e, i, vars, me),
     }
 }
@@ -170,7 +173,7 @@ fn expr_to_ssa(
                 _ => (),
             }
 
-            panic!("len is only valid with string literals");
+            panic!("len is only valid with string literals: len({args:?})");
         }
         Expr::Call(f, args) => {
             let mut pargs = vec![];

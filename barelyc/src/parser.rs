@@ -20,7 +20,12 @@ pub struct Macro {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Stmt {
     Expr(Expr),
-    Assign(String, Expr),
+    Assign(LHS, Expr),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum LHS {
+    Name(String),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -69,14 +74,21 @@ pub fn program(t: &mut TokenStream) -> Result<Program, String> {
 }
 
 fn stmt(t: &mut TokenStream) -> Result<Stmt, String> {
-    if t.consume(Token::Let).is_some() {
-        let name = t.ident()?;
-        t.assert(Token::Assign)?;
-        let e = expr(t)?;
+    let lhs = expr(t)?;
 
-        Ok(Stmt::Assign(name, e))
+    if t.consume(Token::Assign).is_some() {
+        let lhs = expr_to_lhs(lhs);
+        let rhs = expr(t)?;
+        Ok(Stmt::Assign(lhs, rhs))
     } else {
-        Ok(Stmt::Expr(expr(t)?))
+        Ok(Stmt::Expr(lhs))
+    }
+}
+
+fn expr_to_lhs(e: Expr) -> LHS {
+    match e {
+        Expr::Ident(s) => LHS::Name(s),
+        _ => panic!("Invalid lhs"),
     }
 }
 
