@@ -6,8 +6,7 @@
 ### Principles
 
 1. Assembly output should be easily predicted from the source code, no magic
-2. The hardware is completely accessible
-3. Types are a lie
+2. Types are a lie
 
 ### Examples
 
