@@ -1,10 +1,12 @@
 macro print(s) = write(1, s, len(s))
-
-let x = {
-	let y = 7 * 2
-	let z = 4 / 2
-	y + 1 - z
+macro println(s) = {
+	write(1, s, len(s))
+	write(1, "\n", 1)
 }
 
+x = 1
+x = x + 4
+
 print("hello world\n")
+println("hello lines")
 exit(x)
