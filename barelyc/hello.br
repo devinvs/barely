@@ -1,6 +1,10 @@
 macro print(s) = write(1, s, len(s))
 
-let x = 7 * 2 + 1 - 4 / 2
+let x = {
+	let y = 7 * 2
+	let z = 4 / 2
+	y + 1 - z
+}
 
 print("hello world\n")
 exit(x)

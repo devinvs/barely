@@ -122,6 +122,20 @@ fn expr_to_ssa(
     me: &mut Program,
 ) -> SSAVal {
     match e {
+        Expr::StmtList(stmts) => {
+            // In a list variables are scoped,
+            // so we need to create a new list of variables
+            let mut new_vars = vars.clone();
+            let mut out = SSAVal::Num(0);
+
+            assert!(stmts.len() > 0);
+
+            for stmt in stmts {
+                out = stmt_to_ssa(stmt, i, &mut new_vars, me)
+            }
+
+            out
+        }
         Expr::Syscall(n, args) => {
             let mut pargs = vec![];
 

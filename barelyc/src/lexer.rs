@@ -33,6 +33,13 @@ lazy_static! {
         m.insert("let", Token::Let);
         m.insert("import", Token::Import);
 
+        // separators
+        m.insert(",", Token::Comma);
+        m.insert("(", Token::LParen);
+        m.insert(")", Token::RParen);
+        m.insert("{", Token::LCurly);
+        m.insert("}", Token::RCurly);
+
         // Operators
         m.insert("=", Token::Assign);
         m.insert("+", Token::Plus);
@@ -155,6 +162,8 @@ pub enum Token {
     LParen,
     RParen,
     Comma,
+    LCurly,
+    RCurly,
     NL, // newline aware parsing
 
     Num(u64),
@@ -247,17 +256,9 @@ impl Lexer {
                         return Err("ahhh".to_string());
                     }
                 }
-                '(' => {
+                '(' | ')' | '{' | '}' | ',' => {
                     self.push_token(&mut tokens, &mut stack);
-                    tokens.push_back(Token::LParen);
-                }
-                ')' => {
-                    self.push_token(&mut tokens, &mut stack);
-                    tokens.push_back(Token::RParen);
-                }
-                ',' => {
-                    self.push_token(&mut tokens, &mut stack);
-                    tokens.push_back(Token::Comma);
+                    tokens.push_back(MAP.get(c.to_string().as_str()).unwrap().clone());
                 }
                 '=' | '+' | '-' | '*' | '/' | '%' | '~' | '^' | '|' | '&' => {
                     self.push_token(&mut tokens, &mut stack);

@@ -29,6 +29,8 @@ pub enum Expr {
     Str(String),
     Ident(String),
 
+    StmtList(Vec<Stmt>),
+
     Syscall(u64, Vec<Expr>),
     Call(Box<Expr>, Vec<Expr>),
 
@@ -197,6 +199,14 @@ fn base(t: &mut TokenStream) -> Result<Expr, String> {
         Token::String(s) => Expr::Str(s),
         Token::Num(n) => Expr::Num(n),
         Token::Char(c) => Expr::Num(c as u64),
+        Token::LCurly => {
+            let mut stmts = vec![];
+            while t.consume(Token::RCurly).is_none() {
+                stmts.push(stmt(t)?);
+            }
+
+            Expr::StmtList(stmts)
+        }
         _ => panic!("unexpected token"),
     })
 }
