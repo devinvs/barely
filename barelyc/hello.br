@@ -1,12 +1,9 @@
 macro print(s) = write(1, s, len(s))
-macro println(s) = {
-	write(1, s, len(s))
-	write(1, "\n", 1)
-}
 
 x = 1
 x = x + 4
 
+y = alloca(100)
+
 print("hello world\n")
-println("hello lines")
-exit(x)
+exit(y)

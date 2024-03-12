@@ -148,7 +148,7 @@ impl Machine {
 
     fn get_memory(&mut self) -> u64 {
         let m = self.stack;
-        self.stack += 1;
+        self.stack += 8;
         m
     }
 
@@ -158,7 +158,7 @@ impl Machine {
         *self.get_store(v) = Store::Mem(mem);
 
         self.regs[r] = 0;
-        text.push(format!("mov {}, [sp + {mem}]", NAME[r]));
+        text.push(format!("mov {}, [rsp + {mem}]", NAME[r]));
     }
 
     // Swap two registers
@@ -264,6 +264,9 @@ fn compile_ssa(ssa: SSA, m: &mut Machine, text: &mut Vec<String>) {
 
     match op {
         SSAOp::Syscall(n) => compile_syscall(n, res, args, m, text),
+        SSAOp::Call(n) if SSAVal::Lab("alloca".to_string()) == n => {
+            compile_alloca(res, args[0].clone(), m, text)
+        }
         SSAOp::Call(f) => compile_call(f, res, args, m, text),
         // SSAOp::Nonary(n) => compile_nonary(n, res, m, text),
         // SSAOp::Unary(n) => compile_unary(n, res, args[0], m, text),
@@ -273,6 +276,36 @@ fn compile_ssa(ssa: SSA, m: &mut Machine, text: &mut Vec<String>) {
         SSAOp::Binary(n) => compile_binary(n, res, args[0].clone(), args[1].clone(), m, text),
         a => panic!("{a:?}"),
     }
+}
+
+fn compile_alloca(v_out: usize, size: SSAVal, m: &mut Machine, text: &mut Vec<String>) {
+    // get an output register for v_out
+    let r = match *m.get_store(v_out) {
+        Store::Reg(r) => r,
+        Store::Mem(mem) => {
+            let r = m.get_any_register(text);
+            m.bind_register(v_out, r);
+            text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+            r
+        }
+        Store::Unassigned => {
+            let r = m.get_any_register(text);
+            m.bind_register(v_out, r);
+            r
+        }
+    };
+
+    // for now size has to be a hardcoded number. To fix this we can push/pop the sp,
+    // but I'm too lazy for that right now.
+    let size = match size {
+        SSAVal::Num(n) => n,
+        _ => panic!("alloca must have numeric argument (for now)"),
+    };
+
+    text.push(format!("lea {}, [rsp + {}]", NAME[r], m.stack));
+    m.stack += size;
+
+    m.free_register(r);
 }
 
 fn compile_muldiv(
@@ -295,7 +328,7 @@ fn compile_muldiv(
         Store::Mem(mem) => {
             // Clear whatever was in the output register
             m.get_register_except(out_reg, &[RAX, RDX], text);
-            text.push(format!("mov [sp + {}], {}", mem * 8, NAME[out_reg]));
+            text.push(format!("mov [rsp + {}], {}", mem, NAME[out_reg]));
         }
         Store::Unassigned => return,
     }
@@ -325,7 +358,7 @@ fn compile_muldiv(
                 m.free_register(r);
             }
             Store::Mem(mem) => {
-                text.push(format!("mov [sp + {}], rax", mem * 8));
+                text.push(format!("mov [rsp + {}], rax", mem));
                 m.bind_register(v, RAX);
             }
             Store::Unassigned => {
@@ -348,7 +381,7 @@ fn compile_muldiv(
                 m.swap(r, arg1r, text);
             }
             Store::Mem(mem) => {
-                text.push(format!("mov [sp + {}], {}", mem * 8, NAME[arg1r]));
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[arg1r]));
                 m.bind_register(v, arg1r);
             }
             Store::Unassigned => {
@@ -383,7 +416,7 @@ fn compile_call(
         }
         // If in memory, store from rax
         Store::Mem(mem) => {
-            text.push(format!("mov [sp + {}], rax", mem * 8));
+            text.push(format!("mov [rsp + {}], rax", mem));
         }
         Store::Unassigned => (),
     }
@@ -422,7 +455,7 @@ fn compile_call(
             Store::Mem(mem) => {
                 let r = m.get_any_register_except(used, text);
                 text.push(format!("call {}\n", NAME[r]));
-                text.push(format!("mov {}, [sp + {}]", NAME[r], mem * 8));
+                text.push(format!("mov {}, [rsp + {}]", NAME[r], mem));
                 m.bind_register(v, r);
             }
             Store::Unassigned => {
@@ -510,7 +543,7 @@ fn compile_syscall(
         }
         // If in memory, store from rax
         Store::Mem(mem) => {
-            text.push(format!("mov [sp + {}], rax", mem * 8));
+            text.push(format!("mov [rsp + {}], rax", mem));
         }
         Store::Unassigned => (),
     }
@@ -604,7 +637,7 @@ fn compile_binary(
         Store::Mem(mem) => {
             let r = m.get_any_register(text);
             m.bind_register(v_out, r);
-            text.push(format!("mov [sp + {}], {}", mem * 8, NAME[r]));
+            text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
             r
         }
         Store::Unassigned => return,
@@ -628,7 +661,7 @@ fn compile_binary(
                 Store::Mem(mem) => {
                     let r = m.get_any_register(text);
                     m.bind_register(v, r);
-                    text.push(format!("mov [sp + {}], {}", mem * 8, NAME[r]));
+                    text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
                     *argn = NAME[r].to_string();
                 }
                 Store::Unassigned => {

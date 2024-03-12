@@ -7,7 +7,7 @@ use crate::parser::Expr;
 use crate::parser::Stmt;
 use crate::parser::LHS;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SSAVal {
     Var(usize),
     Lab(String),
