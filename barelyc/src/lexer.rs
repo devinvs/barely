@@ -50,6 +50,8 @@ lazy_static! {
         m.insert("^", Token::Xor);
         m.insert("|", Token::Or);
         m.insert("&", Token::And);
+        m.insert(".", Token::Dot);
+        m.insert("_", Token::Underscore);
 
         m
     };
@@ -155,6 +157,8 @@ pub enum Token {
     Xor,
     Or,
     And,
+    Dot,
+    Underscore,
 
     // Separators
     LParen,
@@ -258,7 +262,7 @@ impl Lexer {
                     self.push_token(&mut tokens, &mut stack);
                     tokens.push_back(MAP.get(c.to_string().as_str()).unwrap().clone());
                 }
-                '=' | '+' | '-' | '*' | '/' | '%' | '~' | '^' | '|' | '&' => {
+                '=' | '+' | '-' | '*' | '/' | '%' | '~' | '^' | '|' | '&' | '.' | '_' => {
                     self.push_token(&mut tokens, &mut stack);
                     tokens.push_back(MAP.get(c.to_string().as_str()).unwrap().clone());
                 }

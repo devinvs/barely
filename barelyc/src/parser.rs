@@ -26,6 +26,7 @@ pub enum Stmt {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LHS {
     Name(String),
+    Mem(Expr, Expr, u64),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -41,6 +42,7 @@ pub enum Expr {
 
     BinOp(&'static str, Box<Expr>, Box<Expr>),
     UnOp(&'static str, Box<Expr>),
+    Mem(Box<Expr>, Box<Expr>, u64),
 }
 
 pub fn program(t: &mut TokenStream) -> Result<Program, String> {
@@ -88,6 +90,7 @@ fn stmt(t: &mut TokenStream) -> Result<Stmt, String> {
 fn expr_to_lhs(e: Expr) -> LHS {
     match e {
         Expr::Ident(s) => LHS::Name(s),
+        Expr::Mem(addr, off, n) => LHS::Mem(*addr, *off, n),
         _ => panic!("Invalid lhs"),
     }
 }
@@ -200,6 +203,26 @@ fn postfix_expr(t: &mut TokenStream) -> Result<Expr, String> {
         }
 
         return Ok(Expr::Call(Box::new(b), args));
+    }
+
+    if t.consume(Token::Dot).is_some() {
+        let offset = expr(t)?;
+        let size = if t.consume(Token::Underscore).is_some() {
+            match t.next() {
+                Some(Token::Num(n)) => {
+                    if n != 1 && n != 2 && n != 4 && n != 8 {
+                        panic!("size must be 1,2,4,8")
+                    }
+
+                    n
+                }
+                _ => panic!("size must be numeric"),
+            }
+        } else {
+            8
+        };
+
+        return Ok(Expr::Mem(Box::new(b), Box::new(offset), size));
     }
 
     Ok(b)

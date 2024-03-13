@@ -83,6 +83,11 @@ fn replace(e: Expr, from: &String, to: &Expr) -> Expr {
             Box::new(replace(*b, from, to)),
         ),
         Expr::UnOp(n, a) => Expr::UnOp(n, Box::new(replace(*a, from, to))),
+        Expr::Mem(addr, off, n) => Expr::Mem(
+            Box::new(replace(*addr, from, to)),
+            Box::new(replace(*off, from, to)),
+            n,
+        ),
     }
 }
 
@@ -92,6 +97,9 @@ fn stmt_replace(s: Stmt, from: &String, to: &Expr) -> Stmt {
         Stmt::Assign(lhs, rhs) => {
             let lhs = match lhs {
                 LHS::Name(n) => LHS::Name(n),
+                LHS::Mem(addr, off, n) => {
+                    LHS::Mem(replace(addr, from, to), replace(off, from, to), n)
+                }
             };
             let rhs = replace(rhs, from, to);
 

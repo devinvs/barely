@@ -274,8 +274,191 @@ fn compile_ssa(ssa: SSA, m: &mut Machine, text: &mut Vec<String>) {
             compile_muldiv(n, res, args[0].clone(), args[1].clone(), m, text)
         }
         SSAOp::Binary(n) => compile_binary(n, res, args[0].clone(), args[1].clone(), m, text),
+        SSAOp::Load(n) => compile_load(n, res, args[0].clone(), args[1].clone(), m, text),
+        SSAOp::Store(n) => compile_store(
+            n,
+            args[0].clone(),
+            args[1].clone(),
+            args[2].clone(),
+            m,
+            text,
+        ),
         a => panic!("{a:?}"),
     }
+}
+
+fn compile_load(
+    n: u64,
+    v_out: usize,
+    addr: SSAVal,
+    off: SSAVal,
+    m: &mut Machine,
+    text: &mut Vec<String>,
+) {
+    let size = match n {
+        1 => "byte",
+        2 => "word",
+        4 => "dword",
+        8 => "qword",
+        _ => panic!(),
+    };
+
+    // get an output register for v_out
+    let r = match *m.get_store(v_out) {
+        Store::Reg(r) => r,
+        Store::Mem(mem) => {
+            let r = m.get_any_register(text);
+            m.bind_register(v_out, r);
+            text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+            r
+        }
+        Store::Unassigned => {
+            let r = m.get_any_register(text);
+            m.bind_register(v_out, r);
+            r
+        }
+    };
+
+    let mut addr_n = String::new();
+    let mut off_n = String::new();
+
+    // ensure that addr and offset are either in registers or constants
+    match addr {
+        SSAVal::Var(v) => match *m.get_store(v) {
+            Store::Reg(r) => {
+                m.lru.poke(r);
+                addr_n = NAME[r].to_string();
+            }
+            Store::Mem(mem) => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+                addr_n = NAME[r].to_string();
+            }
+            Store::Unassigned => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                addr_n = NAME[r].to_string();
+            }
+        },
+        SSAVal::Lab(s) => *&mut addr_n = s,
+        SSAVal::Num(n) => addr_n = n.to_string(),
+    }
+
+    match off {
+        SSAVal::Var(v) => match *m.get_store(v) {
+            Store::Reg(r) => {
+                m.lru.poke(r);
+                off_n = NAME[r].to_string();
+            }
+            Store::Mem(mem) => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+                off_n = NAME[r].to_string();
+            }
+            Store::Unassigned => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                off_n = NAME[r].to_string()
+            }
+        },
+        SSAVal::Lab(s) => *&mut off_n = s,
+        SSAVal::Num(n) => off_n = n.to_string(),
+    }
+
+    text.push(format!("mov {}, {size} [{addr_n} + {off_n}]", NAME[r]));
+    m.free_register(r);
+}
+
+fn compile_store(
+    n: u64,
+    addr: SSAVal,
+    off: SSAVal,
+    src: SSAVal,
+    m: &mut Machine,
+    text: &mut Vec<String>,
+) {
+    let size = match n {
+        1 => "byte",
+        2 => "word",
+        4 => "dword",
+        8 => "qword",
+        _ => panic!(),
+    };
+
+    let mut addr_n = "".to_string();
+    let mut off_n = "".to_string();
+    let mut src_n = "".to_string();
+
+    // ensure that addr and offset are either in registers or constants
+    match addr {
+        SSAVal::Var(v) => match *m.get_store(v) {
+            Store::Reg(r) => {
+                m.lru.poke(r);
+                addr_n = NAME[r].to_string();
+            }
+            Store::Mem(mem) => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+                addr_n = NAME[r].to_string();
+            }
+            Store::Unassigned => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                addr_n = NAME[r].to_string();
+            }
+        },
+        SSAVal::Lab(s) => *&mut addr_n = s,
+        SSAVal::Num(n) => addr_n = n.to_string(),
+    }
+
+    match off {
+        SSAVal::Var(v) => match *m.get_store(v) {
+            Store::Reg(r) => {
+                m.lru.poke(r);
+                off_n = NAME[r].to_string();
+            }
+            Store::Mem(mem) => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+                off_n = NAME[r].to_string();
+            }
+            Store::Unassigned => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                off_n = NAME[r].to_string()
+            }
+        },
+        SSAVal::Lab(s) => *&mut off_n = s,
+        SSAVal::Num(n) => off_n = n.to_string(),
+    }
+
+    match src {
+        SSAVal::Var(v) => match *m.get_store(v) {
+            Store::Reg(r) => {
+                m.lru.poke(r);
+                src_n = NAME[r].to_string();
+            }
+            Store::Mem(mem) => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                text.push(format!("mov [rsp + {}], {}", mem, NAME[r]));
+                src_n = NAME[r].to_string();
+            }
+            Store::Unassigned => {
+                let r = m.get_any_register(text);
+                m.bind_register(v, r);
+                src_n = NAME[r].to_string()
+            }
+        },
+        SSAVal::Lab(s) => *&mut src_n = s,
+        SSAVal::Num(n) => src_n = n.to_string(),
+    }
+
+    text.push(format!("mov {size} [{addr_n} + {off_n}], {src_n}"));
 }
 
 fn compile_alloca(v_out: usize, size: SSAVal, m: &mut Machine, text: &mut Vec<String>) {

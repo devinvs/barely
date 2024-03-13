@@ -32,6 +32,8 @@ pub enum SSAOp {
     Nonary(&'static str),
     Unary(&'static str),
     Binary(&'static str),
+    Load(u64),
+    Store(u64),
 }
 
 impl Debug for SSAOp {
@@ -40,6 +42,8 @@ impl Debug for SSAOp {
             Self::Call(v) => f.write_fmt(format_args!("call {:?}", v))?,
             Self::Syscall(n) => f.write_fmt(format_args!("syscall {n}"))?,
             Self::Nonary(n) | Self::Unary(n) | Self::Binary(n) => f.write_str(n)?,
+            Self::Load(n) => f.write_fmt(format_args!("load {n}"))?,
+            Self::Store(n) => f.write_fmt(format_args!("store {n}"))?,
         }
 
         Ok(())
@@ -112,6 +116,19 @@ fn stmt_to_ssa(
                 let v = expr_to_ssa(e, i, vars, me);
                 vars.insert(name, v.clone());
                 v
+            }
+            LHS::Mem(addr, off, n) => {
+                let src = expr_to_ssa(e, i, vars, me);
+                let addr = expr_to_ssa(addr, i, vars, me);
+                let off = expr_to_ssa(off, i, vars, me);
+
+                me.body.push(SSA {
+                    res: 0,
+                    op: SSAOp::Store(n),
+                    args: vec![addr, off, src],
+                });
+
+                SSAVal::Var(0)
             }
         },
         Stmt::Expr(e) => expr_to_ssa(e, i, vars, me),
@@ -233,6 +250,21 @@ fn expr_to_ssa(
             }
         }
         Expr::Str(s) => SSAVal::Lab(format!("_s{}", me.str_id(s))),
+        Expr::Mem(addr, offset, n) => {
+            let addr = expr_to_ssa(*addr, i, vars, me);
+            let offset = expr_to_ssa(*offset, i, vars, me);
+
+            let res = *i;
+            *i += 1;
+
+            me.body.push(SSA {
+                res,
+                op: SSAOp::Load(n),
+                args: vec![addr, offset],
+            });
+
+            SSAVal::Var(res)
+        }
     }
 }
 

@@ -1,9 +1,14 @@
 macro print(s) = write(1, s, len(s))
 
-x = 1
-x = x + 4
+s = alloca(16)
+len = 0
+name = 8
 
-y = alloca(100)
+s.0 = 4
+s.8_1 = 'l'
+s.9_1 = 'o'
+s.10_1 = 'l'
+s.11_1 = '\n'
 
-print("hello world\n")
-exit(y)
+write(1, s + 8, s.len)
+exit(0)
